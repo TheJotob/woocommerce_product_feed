@@ -16,7 +16,8 @@ add_action('init', function() {
         'public'        => true,
         'label'         => "Feeds",
         'supports'      => [],
-        'show_in_rest'  => true
+        'show_in_rest'  => true,
+
     ];
     register_post_type('feed', $args);
 });
@@ -30,9 +31,21 @@ function feeds_display_meta_box($post) {
         'taxonomy'      => 'product_cat',
         'hide_empty'    => true
     ]);
+    wp_nonce_field(basename(__FILE__), 'feed_category_nonce');
     include('meta_box.php');
 }
 
 add_action('save_post', function($post_id) {
-    error_log("TEST");
+    if(!isset($_POST["feed_category_nonce"])|| !wp_verify_nonce($_POST["feed_category_nonce"], basename(__FILE__)))
+        return $post_id;
+
+    $new_meta_value = (isset($_POST['feed_category']) ? sanitize_html_class($_POST['feed_category']) : '');
+    $meta_key = "feed_category";
+    $meta_value = get_post_meta($post_id, $meta_key, true);
+
+    if($new_meta_value && $meta_value == '')
+        add_post_meta($post_id, $meta_key, $new_meta_value);
+
+    elseif($new_meta_value && $new_meta_value != $meta_value)
+        update_post_meta($post_id, $meta_key, $new_meta_value);
 });
